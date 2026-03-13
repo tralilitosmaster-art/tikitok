@@ -1,0 +1,12 @@
+{
+  "name": "tikitok-render-no-ws-full",
+  "version": "1.0.0",
+  "description": "TikTok style demo app for Render without ws",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
