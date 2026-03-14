@@ -1,0 +1,145 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Тикиток (приват)</title>
+<style>
+body{margin:0;background:#0b0b0b;color:white;font-family:Arial;overflow:hidden}
+.feed{height:100vh;overflow-y:scroll;scroll-snap-type:y mandatory}
+.video{height:100vh;scroll-snap-align:start;position:relative}
+video{width:100%;height:100%;object-fit:cover;background:black}
+.ui{position:absolute;right:15px;bottom:120px;display:flex;flex-direction:column;gap:18px}
+.btn{background:rgba(0,0,0,0.6);border:none;color:white;font-size:18px;padding:12px;border-radius:12px;cursor:pointer}
+.info{position:absolute;bottom:20px;left:20px;max-width:60%}
+.bottomBar{position:fixed;bottom:0;width:100%;height:70px;background:#111;display:flex;justify-content:space-around;align-items:center;border-top:1px solid #222}
+.tab{color:white;font-size:18px;cursor:pointer}
+.studio{position:fixed;bottom:70px;left:0;width:100%;height:60vh;background:#111;display:none;flex-direction:column;padding:20px}
+.masks{display:flex;gap:10px;margin-top:10px}
+.mask{padding:8px;background:#222;border-radius:8px;cursor:pointer}
+.rec{width:80px;height:80px;border-radius:50%;background:red;margin:auto;cursor:pointer}
+.login{position:fixed;top:10px;left:10px;z-index:5}
+</style>
+</head>
+<body>
+
+<div class="login">
+<input id="nick" placeholder="ник">
+<button onclick="login()">войти</button>
+</div>
+
+<div id="feed" class="feed"></div>
+
+<div id="studio" class="studio">
+<h3>🎬 Студия</h3>
+<button onclick="upload()">Загрузить видео</button>
+<div class="rec" onclick="record()"></div>
+<div class="masks">
+<div class="mask" onclick="mask('none')">🙂</div>
+<div class="mask" onclick="mask('bw')">⚫</div>
+<div class="mask" onclick="mask('invert')">🔄</div>
+<div class="mask" onclick="mask('sepia')">🟤</div>
+</div>
+</div>
+
+<div class="bottomBar">
+<div class="tab" onclick="home()">🏠</div>
+<div class="tab" onclick="openStudio()">➕</div>
+<div class="tab" onclick="profile()">👤</div>
+</div>
+
+<script>
+let USER=null
+let currentMask="none"
+
+async function login(){
+let n=document.getElementById("nick").value
+let r=await fetch("/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nickname:n})})
+let j=await r.json()
+USER=j.user
+alert("вошел как "+USER.nickname)
+}
+
+async function load(){
+let r=await fetch("/api/feed")
+let j=await r.json()
+let f=document.getElementById("feed")
+f.innerHTML=""
+
+j.items.forEach(v=>{
+let d=document.createElement("div")
+d.className="video"
+
+let vid=document.createElement("video")
+vid.src="/video/"+v.file
+vid.loop=true
+vid.controls=false
+vid.onplay=()=>view(v.id)
+
+if(currentMask==="bw") vid.style.filter="grayscale(1)"
+if(currentMask==="invert") vid.style.filter="invert(1)"
+if(currentMask==="sepia") vid.style.filter="sepia(1)"
+
+let ui=document.createElement("div")
+ui.className="ui"
+
+let like=document.createElement("button")
+like.className="btn"
+like.innerText="❤ "+v.likes
+like.onclick=()=>likeVideo(v.id)
+
+let com=document.createElement("button")
+com.className="btn"
+com.innerText="💬"
+com.onclick=()=>comment(v.id)
+
+let share=document.createElement("button")
+share.className="btn"
+share.innerText="📤"
+share.onclick=()=>alert("ссылка скопирована")
+
+ui.appendChild(like)
+ui.appendChild(com)
+ui.appendChild(share)
+
+let info=document.createElement("div")
+info.className="info"
+info.innerHTML="<b>"+v.author+"</b><br>"+v.description+"<br>👁 "+v.views
+
+d.appendChild(vid)
+d.appendChild(ui)
+d.appendChild(info)
+
+f.appendChild(d)
+})
+}
+
+async function likeVideo(id){
+await fetch("/api/like",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({videoId:id})})
+load()
+}
+
+async function view(id){
+await fetch("/api/view",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({videoId:id})})
+}
+
+async function comment(id){
+let t=prompt("комментарий")
+if(!t)return
+await fetch("/api/comment",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({videoId:id,user:USER.nickname,text:t})})
+}
+
+function openStudio(){document.getElementById("studio").style.display="flex"}
+function home(){document.getElementById("studio").style.display="none"}
+function profile(){alert("профиль: "+(USER?USER.nickname:"гость"))}
+
+function mask(m){currentMask=m;load()}
+
+function upload(){alert("загрузи видео в репозиторий и добавь его в videos.json")}
+function record(){alert("запись видео будет добавлена позже")}
+
+load()
+</script>
+
+</body>
+</html>
